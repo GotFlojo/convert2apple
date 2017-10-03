@@ -1,16 +1,32 @@
 #!/bin/bash
 
-DIRECTORY="/users/flojo/music"
+DIRECTORY="/users/flojo/music/"
 APPLEDIR="$DIRECTORY/apple"
 #filetype="flac"
 
+findArtwork(){
+    # echo "Find in: $1"
+    # find artwork and return first found
+    find "$1" -type f -iname 'cover.jpg' -o -iname 'cover.png' -o -iname 'front.jpg' -o -iname 'front.png' | head -1
+}
 
 embedArtwork(){
-    local file="$1"
     #tageditor
     # https://github.com/Martchus/tageditor
-
-    mp4art -z add "cover.png" "$file"
+    
+    local file="$1"
+    local targetfile="$2"
+    local COVER=$(findArtwork $(dirname "$file"))
+    # echo "Cover: $COVER"
+    if [ -n "$COVER" ]; then
+        if [ -e "$targetfile" ]; then
+            mp4art -z --add "$COVER" "$targetfile"
+        else
+            echo "Error while embedding Art. File: $targetfile"
+        fi
+    else
+        echo "No coverart found"
+    fi
 }
 
 space2Underscore(){
@@ -45,17 +61,18 @@ find "$DIRECTORY" -type f -print0 | while IFS= read -r -d '' file; do
         ogg)
              # Ogg need map_metadata
              echo "Doing OGG to MP3 conversion"
-             # ffmpeg -i "$file" -i cover.jpg -c:a libmp3lame -q:a 2
-             # -map_metadata 0:s:0 -map 0 -map 1"$OUTPUT"
+             # ffmpeg -i "$file" -i cover.jpg -c:a libmp3lame -q:a 2 -map_metadata 0:s:0 -map 0 -map 1"$OUTPUT"
             ;;
         flac)
              # flac conversion to apple lossless
              echo "Doing FLAC conversion"
              # ffmpeg -i "$file" -c:a alac "$OUTPUT"
-             # embedArtwork
+             echo "Adding Coverart"
+             embedArtwork "$file" "$OUTPUT"
              ;;
         *)
             echo "Copying $file"
+            # rsync -az --exclude ".DS_Store" "$file" "$OUTPUTDIR"
             ;;
     esac
 
